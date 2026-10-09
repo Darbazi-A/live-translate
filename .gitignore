@@ -1,4 +1,5 @@
 __pycache__/
 *.pyc
+.venv/
 # session logs contain what the speakers said
 logs/

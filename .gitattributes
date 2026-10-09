@@ -1,0 +1,3 @@
+# start.sh must keep LF endings to run on macOS/Linux; start.bat keeps CRLF for cmd
+*.sh text eol=lf
+*.bat text eol=crlf
