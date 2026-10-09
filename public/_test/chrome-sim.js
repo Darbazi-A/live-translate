@@ -32,6 +32,7 @@ window.chromeSim = async function (script, opts = {}) {
     setTimeout(() => this.onstart && this.onstart(), 0);
   };
   RealSR.prototype.stop = RealSR.prototype.abort = function () { setTimeout(() => this.onend && this.onend(), 0); };
+  window.__ltNoMic = true;   // no real microphone pipeline under test
   document.getElementById("mic").click();
   await sleep(100);
 

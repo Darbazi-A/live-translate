@@ -1,0 +1,77 @@
+# Builds the Windows installer and the macOS app. Push a tag like v1.1.0 to publish them
+# as a GitHub release, or run it by hand (Actions -> Build installers -> Run workflow)
+# and download the files from the run's "Artifacts".
+name: Build installers
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pyinstaller
+      - run: pyinstaller --noconfirm packaging/LiveTranslate.spec
+      - name: Smoke test
+        shell: pwsh
+        run: |
+          $env:LT_NO_BROWSER = "1"; $env:PORT = "8765"
+          $p = Start-Process dist\LiveTranslate\LiveTranslate.exe -PassThru
+          Start-Sleep 6
+          $info = Invoke-RestMethod http://127.0.0.1:8765/api/info
+          Invoke-WebRequest http://127.0.0.1:8765/listen -UseBasicParsing | Out-Null
+          Stop-Process $p.Id
+          "server $($info.version) answered"
+      - name: Installer
+        shell: pwsh
+        run: |
+          $env:LT_VERSION = (Select-String -Path server.py -Pattern '^VERSION = "(.+)"').Matches[0].Groups[1].Value
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc packaging\windows\LiveTranslate.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/LiveTranslate-Setup-*.exe
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pyinstaller
+      - run: pyinstaller --noconfirm packaging/LiveTranslate.spec
+      - name: Disk image
+        run: |
+          V=$(sed -n 's/^VERSION = "\(.*\)"/\1/p' server.py)
+          mkdir -p dmg && cp -R "dist/Live Translate.app" dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname "Live Translate" -srcfolder dmg -ov -format UDZO "dist/LiveTranslate-mac-$V.dmg"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-app
+          path: dist/LiveTranslate-mac-*.dmg
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: out/*

@@ -1,276 +1,497 @@
 <!doctype html>
-<html lang="ka">
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Listen · Live Translate</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0d13">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Live Translate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Georgian:wght@400;500;600;700;800&display=swap">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/style.css">
+  <script src="/ui.js"></script>
+  <script src="/player.js"></script>
 </head>
 <body>
-  <div class="start-overlay" id="overlay">
-    <div class="box">
-      <h2>🎧 Live Translate</h2>
-      <p>Choose the language you want to hear<br>აირჩიე ენა, რომელზეც გინდა მოისმინო</p>
-      <div class="seg langSeg">
-        <button data-lang="en" class="on">🇬🇧 English</button>
-        <button data-lang="ka">🇬🇪 ქართული</button>
-      </div>
-      <div><button class="btn primary" id="startBtn">▶ Start listening / დაწყება</button></div>
-      <p style="font-size:13px;margin-top:16px">Use headphones · გამოიყენე ყურსასმენი</p>
-    </div>
-  </div>
+  <!-- ============================================================ welcome -->
+  <section class="welcome" id="welcome">
+    <div class="welcome-card">
+      <div class="logo"><i data-icon="waves"></i></div>
+      <h1>Live Translate</h1>
+      <p class="sub">Live translation of the talk on your phone<span>ლაივ თარგმანი შენს ტელეფონზე</span></p>
+      <span class="pill" id="wSpeaker"><span class="dot"></span><span id="wSpeakerText">Connecting…</span></span>
 
-  <div class="wrap">
-    <header class="top">
-      <h1>🎧 <span id="title">Live translation</span></h1>
-      <div class="row">
-        <span class="badge" id="lagBadge" title="text → voice delay on this device" hidden>⏱ <span id="lag">0.0</span>s</span>
-        <span class="badge" id="conn"><span class="dot"></span><span id="connText">…</span></span>
+      <fieldset class="choice" id="langChoice">
+        <legend>I want to hear · მინდა მოვისმინო</legend>
+        <button type="button" class="choice-card" data-value="en">
+          <span class="code">EN</span>
+          <span class="txt"><b>English</b><small>Translation of the Georgian talk</small></span>
+          <span class="tick"><i data-icon="check"></i></span>
+        </button>
+        <button type="button" class="choice-card" data-value="ka">
+          <span class="code">KA</span>
+          <span class="txt"><b>ქართული</b><small>ინგლისური საუბრის თარგმანი</small></span>
+          <span class="tick"><i data-icon="check"></i></span>
+        </button>
+      </fieldset>
+
+      <div class="voice-row">
+        <span id="wVoiceLbl">Voice</span>
+        <div class="seg" id="wVoice">
+          <button type="button" data-value="f" id="wVoiceF">Female</button>
+          <button type="button" data-value="m" id="wVoiceM">Male</button>
+        </div>
+      </div>
+
+      <button class="btn primary xl" id="startBtn"><i data-icon="play"></i><span id="startLbl">Start listening</span></button>
+      <button class="btn ghost alt" id="readBtn"><i data-icon="text" class="sm"></i><span id="readLbl">Read captions only (no sound)</span></button>
+      <p class="hint"><i data-icon="headphones" class="sm"></i><span id="hpHint">Use headphones for the best experience</span></p>
+    </div>
+  </section>
+
+  <!-- ============================================================ app -->
+  <div id="app" hidden>
+    <header class="bar">
+      <div class="brand"><span class="logo"><i data-icon="waves"></i></span><span class="brand-text">Live Translate</span></div>
+      <div class="bar-right">
+        <span class="pill" id="statusPill"><span class="dot"></span><span id="statusText"></span></span>
+        <button class="icon-btn" id="openSettings" aria-label="Settings"><i data-icon="sliders"></i></button>
       </div>
     </header>
 
-    <div class="panel">
-      <div class="row" style="justify-content:space-between">
-        <div class="seg langSeg">
-          <button data-lang="en" class="on">English</button>
-          <button data-lang="ka">ქართული</button>
+    <main class="stage" id="stage">
+      <section class="card caption-card" aria-live="polite">
+        <div class="caption-meta">
+          <span id="dirLabel"></span>
+          <span class="lag" id="lagInfo"></span>
         </div>
-        <div class="row">
-          <div class="seg" id="voiceSeg">
-            <button data-voice="f" class="on">♀</button>
-            <button data-voice="m">♂</button>
-          </div>
-          <label class="chk"><input type="checkbox" id="speak" checked> <span id="speakLbl">Voice</span></label>
+        <div class="caption" id="caption"><span class="placeholder" id="capPlaceholder"></span></div>
+        <div class="caption-orig" id="captionOrig"></div>
+      </section>
+
+      <section class="card transcript">
+        <div class="card-head">
+          <h2 class="card-title" id="histTitle">Transcript</h2>
         </div>
+        <ol class="log" id="log"></ol>
+        <div class="empty" id="logEmpty"></div>
+      </section>
+    </main>
+
+    <nav class="dock" aria-label="Playback">
+      <button class="icon-btn lg" id="muteBtn" aria-label="Voice on/off"></button>
+      <div class="vol" id="dockVol">
+        <input type="range" class="range" id="dockVolume" min="0" max="100" step="1" aria-label="Volume">
       </div>
-    </div>
-
-    <div class="panel">
-      <div class="caption" id="caption"><span class="placeholder" id="waiting">Waiting for the speaker…</span></div>
-    </div>
-
-    <div class="panel">
-      <h2 id="histTitle">History</h2>
-      <div class="log" id="log"></div>
-    </div>
+      <button class="chip" id="langChip" aria-label="Switch language"><i data-icon="globe" class="sm"></i><span id="langChipText">EN</span></button>
+      <button class="icon-btn lg" id="openSettings2" aria-label="Settings"><i data-icon="sliders"></i></button>
+    </nav>
   </div>
 
+  <!-- ============================================================ settings -->
+  <dialog class="sheet" id="settings">
+    <div class="sheet-inner">
+      <div class="grabber"></div>
+      <div class="sheet-head">
+        <h2 id="sTitle">Settings</h2>
+        <button class="icon-btn" data-close aria-label="Close"><i data-icon="close"></i></button>
+      </div>
+      <div class="sheet-body">
+        <div class="sheet-section">
+          <h3><i data-icon="globe" class="sm"></i><span id="sLang">Language</span></h3>
+          <div class="seg" id="sLangSeg">
+            <button data-value="en">English</button>
+            <button data-value="ka">ქართული</button>
+          </div>
+        </div>
+
+        <div class="sheet-section">
+          <h3><i data-icon="volume" class="sm"></i><span id="sSound">Sound</span></h3>
+          <label class="switch-row">
+            <span class="txt"><span id="sVoiceOn">Spoken translation</span><small id="sVoiceOnSub"></small></span>
+            <input type="checkbox" class="switch" id="voiceOn">
+          </label>
+          <div class="field" id="volField">
+            <label for="volume" id="sVolume">Volume</label>
+            <div class="range-row"><input type="range" class="range" id="volume" min="0" max="100" step="1"><span class="val" id="volumeVal"></span></div>
+          </div>
+          <p class="hint muted small" id="volNote" hidden></p>
+          <div class="field">
+            <span class="field-label" id="sVoice">Voice</span>
+            <div class="seg" id="voiceSeg">
+              <button data-value="f" id="sFemale">Female</button>
+              <button data-value="m" id="sMale">Male</button>
+            </div>
+          </div>
+          <div class="field">
+            <span class="field-label" id="sSpeed">Speed</span>
+            <div class="seg" id="speedSeg">
+              <button data-value="auto" id="sAuto">Auto</button>
+              <button data-value="1">1×</button>
+              <button data-value="1.15">1.15×</button>
+              <button data-value="1.3">1.3×</button>
+            </div>
+            <span class="hint" id="sSpeedHint"></span>
+          </div>
+          <div class="field" id="outField">
+            <label for="output" id="sOutput">Output device</label>
+            <select class="select" id="output"></select>
+            <button class="btn sm ghost" id="outNames" type="button" hidden><i data-icon="refresh" class="sm"></i><span id="sShowNames">Show device names</span></button>
+          </div>
+          <p class="hint muted small" id="outNote"></p>
+        </div>
+
+        <div class="sheet-section">
+          <h3><i data-icon="text" class="sm"></i><span id="sDisplay">Display</span></h3>
+          <div class="field">
+            <label for="size" id="sSize">Text size</label>
+            <div class="range-row"><input type="range" class="range" id="size" min="18" max="60" step="2"><span class="val" id="sizeVal"></span></div>
+          </div>
+          <label class="switch-row">
+            <span class="txt"><span id="sOrig">Show original text</span><small id="sOrigSub"></small></span>
+            <input type="checkbox" class="switch" id="showOrig">
+          </label>
+          <label class="switch-row">
+            <span class="txt"><span id="sFocus">Captions only</span><small id="sFocusSub"></small></span>
+            <input type="checkbox" class="switch" id="focus">
+          </label>
+          <label class="switch-row" id="wakeRow">
+            <span class="txt"><span id="sWake">Keep screen on</span><small id="sWakeSub"></small></span>
+            <input type="checkbox" class="switch" id="wake">
+          </label>
+          <div class="field" style="margin-top:8px">
+            <span class="field-label" id="sTheme">Theme</span>
+            <div class="seg" id="themeSeg">
+              <button data-value="auto" id="sThemeAuto">Auto</button>
+              <button data-value="dark" id="sDark">Dark</button>
+              <button data-value="light" id="sLight">Light</button>
+            </div>
+          </div>
+        </div>
+        <p class="muted small" id="footInfo"></p>
+      </div>
+    </div>
+  </dialog>
+
   <script>
-  const $ = (id) => document.getElementById(id);
+  const { $, store } = LT;
+  LT.hydrateIcons();
+
   const UI = {
-    en: { title: "Live translation", waiting: "Waiting for the speaker…", hist: "History", voice: "Voice",
-          on: "Live", off: "Reconnecting…" },
-    ka: { title: "ლაივ თარგმანი", waiting: "ველოდებით სპიკერს…", hist: "ისტორია", voice: "ხმა",
-          on: "ლაივ", off: "ხელახლა უკავშირდება…" },
+    en: {
+      start: "Start listening", read: "Read captions only (no sound)", hp: "Use headphones for the best experience",
+      voiceLbl: "Voice", female: "Female", male: "Male",
+      live: "Live", waiting: "Waiting for the speaker", offline: "Reconnecting…", connecting: "Connecting…",
+      speakerLive: "The speaker is live", speakerOff: "The speaker hasn't started yet",
+      dir: { ka: "Georgian → English", en: "English → Georgian" }, original: "Original",
+      capWaiting: "The translation will appear here as soon as the speaker starts.",
+      transcript: "Transcript", noTranscript: "Nothing yet.",
+      settings: "Settings", language: "Language", sound: "Sound",
+      voiceOn: "Spoken translation", voiceOnSub: "Hear the translation, not just read it",
+      volume: "Volume", volNote: "On iPhone use the volume buttons on the side of the phone.",
+      speed: "Speed", auto: "Auto", speedHint: "Auto speeds up a little when you fall behind the speaker.",
+      output: "Output device", outDefault: "System default", showNames: "Show device names",
+      outNote: "Pick headphones or speakers in your phone's audio controls (Bluetooth, AirPods).",
+      outNoteDesk: "Choose where the voice plays: speakers, headphones, a hall system.",
+      display: "Display", size: "Text size", orig: "Show original text", origSub: "The speaker's words under the translation",
+      focus: "Captions only", focusSub: "Bigger captions, transcript hidden",
+      wake: "Keep screen on", wakeSub: "So the phone doesn't lock during the talk",
+      theme: "Theme", themeAuto: "Auto", dark: "Dark", light: "Light",
+      delay: (s) => `voice ${s}s behind`, voiceOff: "Voice off", voiceOnT: "Voice on",
+      listeners: (n) => `${n} listening`,
+    },
+    ka: {
+      start: "მოსმენის დაწყება", read: "მხოლოდ სუბტიტრები (ხმის გარეშე)", hp: "საუკეთესო ხარისხისთვის გამოიყენე ყურსასმენი",
+      voiceLbl: "ხმა", female: "ქალის", male: "კაცის",
+      live: "ლაივ", waiting: "ველოდებით სპიკერს", offline: "ხელახლა უკავშირდება…", connecting: "უკავშირდება…",
+      speakerLive: "სპიკერი ლაივშია", speakerOff: "სპიკერს ჯერ არ დაუწყია",
+      dir: { ka: "ქართული → ინგლისური", en: "ინგლისური → ქართული" }, original: "ორიგინალი",
+      capWaiting: "თარგმანი აქ გამოჩნდება, როგორც კი სპიკერი ლაპარაკს დაიწყებს.",
+      transcript: "ტრანსკრიპტი", noTranscript: "ჯერ არაფერია.",
+      settings: "პარამეტრები", language: "ენა", sound: "ხმა",
+      voiceOn: "ხმოვანი თარგმანი", voiceOnSub: "თარგმანი ისმის და არა მხოლოდ იკითხება",
+      volume: "ხმის სიმაღლე", volNote: "iPhone-ზე ხმა ტელეფონის გვერდითა ღილაკებით შეცვალე.",
+      speed: "სისწრაფე", auto: "ავტო", speedHint: "ავტო ოდნავ აჩქარებს, როცა სპიკერს ჩამორჩები.",
+      output: "ხმის გამოსავალი", outDefault: "სისტემის ნაგულისხმევი", showNames: "მოწყობილობების ჩვენება",
+      outNote: "ყურსასმენი ან დინამიკი ტელეფონის ხმის პარამეტრებში აირჩიე (Bluetooth, AirPods).",
+      outNoteDesk: "აირჩიე, სად ჟღერდეს ხმა: დინამიკი, ყურსასმენი, დარბაზის სისტემა.",
+      display: "ეკრანი", size: "ტექსტის ზომა", orig: "ორიგინალის ჩვენება", origSub: "სპიკერის სიტყვები თარგმანის ქვეშ",
+      focus: "მხოლოდ სუბტიტრები", focusSub: "დიდი სუბტიტრები, ტრანსკრიპტის გარეშე",
+      wake: "ეკრანი არ ჩაქრეს", wakeSub: "რომ ტელეფონი საუბრისას არ დაიბლოკოს",
+      theme: "თემა", themeAuto: "ავტო", dark: "მუქი", light: "ღია",
+      delay: (s) => `ხმა ${s} წმ-ით უკან`, voiceOff: "ხმა გამორთულია", voiceOnT: "ხმა ჩართულია",
+      listeners: (n) => `${n} მსმენელი`,
+    },
   };
-  const CAPTION_CHARS = 200;   // rolling caption length
-  const MAX_LAG = 8;           // seconds behind the speaker before pieces get skipped
+  const CAPTION_UTTS = 4;   // utterances shown in the rolling caption
 
-  const store = {
-    get(k, d) { try { return localStorage.getItem(k) || d; } catch { return d; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
-  };
-
+  // ---------------------------------------------------------------- state
   let myLang = store.get("lt-lang", "en");
-  let voice = store.get("lt-voice", "f");
-  // utterance id -> { utt, src, dst, source, final, chunks: [{id, text}], preview, ts }
-  const utts = new Map();
+  if (!UI[myLang]) myLang = "en";
+  const player = new LT.Player();
+  player.lang = myLang;
+  player.voice = store.get("lt-voice", "f");
+  player.speed = store.get("lt-speed", "auto");
+  player.enabled = false;              // until "Start listening"
+  let voiceWanted = store.bool("lt-voice-on", true);
+  let started = false;
+  let connected = false;
+  let speakerLive = false;
+  const utts = new Map();              // utterance id -> { utt, src, dst, source, final, chunks, preview, ts }
+  const t = () => UI[myLang];
 
-  // ---------- UI
-  function applyLang() {
-    document.querySelectorAll(".langSeg button").forEach((b) => b.classList.toggle("on", b.dataset.lang === myLang));
-    const t = UI[myLang];
-    $("title").textContent = t.title;
-    $("histTitle").textContent = t.hist;
-    $("speakLbl").textContent = t.voice;
-    if ($("waiting")) $("waiting").textContent = t.waiting;
+  // ---------------------------------------------------------------- welcome
+  const setChoice = (v) => document.querySelectorAll("#langChoice .choice-card").forEach((b) => b.classList.toggle("on", b.dataset.value === v));
+  setChoice(myLang);
+  $("langChoice").onclick = (e) => {
+    const b = e.target.closest(".choice-card"); if (!b) return;
+    setLang(b.dataset.value);
+  };
+  const setWVoice = LT.seg($("wVoice"), player.voice, (v) => setVoice(v));
+
+  function begin(withVoice) {
+    started = true;
+    player.unlock();
+    voiceWanted = withVoice;
+    store.setBool("lt-voice-on", withVoice);
+    player.setEnabled(withVoice);
+    $("welcome").remove();
+    $("app").hidden = false;
+    applyAll();
+    if (store.bool("lt-wake", true)) wakeLock(true);
+    if ("mediaSession" in navigator) {
+      try { navigator.mediaSession.metadata = new MediaMetadata({ title: "Live Translate", artist: t().dir[myLang === "en" ? "ka" : "en"] }); } catch {}
+    }
+  }
+  $("startBtn").onclick = () => begin(true);
+  $("readBtn").onclick = () => begin(false);
+
+  // ---------------------------------------------------------------- settings
+  const dlg = LT.sheet($("settings"));
+  $("openSettings").onclick = $("openSettings2").onclick = () => { refreshOutputs(); dlg.open(); };
+
+  const setLangSeg = LT.seg($("sLangSeg"), myLang, (v) => setLang(v));
+  const setVoiceSeg = LT.seg($("voiceSeg"), player.voice, (v) => setVoice(v));
+  LT.seg($("speedSeg"), player.speed, (v) => { player.speed = v; store.set("lt-speed", v); });
+  LT.seg($("themeSeg"), LT.theme.get(), (v) => LT.theme.set(v));
+
+  function setLang(v) {
+    if (!UI[v] || v === myLang) { setChoice(v); return; }
+    myLang = v; store.set("lt-lang", v);
+    player.lang = v;
+    player.clear();
+    setChoice(v); setLangSeg(v);
+    applyAll();
+  }
+  function setVoice(v) {
+    player.voice = v; store.set("lt-voice", v);
+    setWVoice(v); setVoiceSeg(v);
+  }
+
+  // volume (element volume; iPhones only obey the hardware buttons)
+  const vol = store.num("lt-volume", 100);
+  player.setVolume(vol / 100);
+  $("volume").value = $("dockVolume").value = vol;
+  const paintVol = LT.range($("volume"), $("volumeVal"), (v) => v + "%");
+  const paintDockVol = LT.range($("dockVolume"));
+  function onVol(e) {
+    const v = +e.target.value;
+    $("volume").value = $("dockVolume").value = v;
+    paintVol(); paintDockVol();
+    player.setVolume(v / 100);
+    store.set("lt-volume", v);
+  }
+  $("volume").addEventListener("input", onVol);
+  $("dockVolume").addEventListener("input", onVol);
+  if (!LT.Player.volumeWorks) { $("volField").hidden = true; $("volNote").hidden = false; $("dockVolume").remove(); }
+
+  // voice on/off
+  $("voiceOn").onchange = () => setVoiceOn($("voiceOn").checked);
+  $("muteBtn").onclick = () => setVoiceOn(!voiceWanted);
+  function setVoiceOn(on) {
+    voiceWanted = on; store.setBool("lt-voice-on", on);
+    if (on) player.unlock();
+    player.setEnabled(on);
+    paintMute();
+    LT.toast(on ? t().voiceOnT : t().voiceOff);
+  }
+  function paintMute() {
+    $("voiceOn").checked = voiceWanted;
+    $("muteBtn").innerHTML = LT.icon(voiceWanted ? "volume" : "mute");
+    $("muteBtn").classList.toggle("off", !voiceWanted);
+    if ($("dockVolume")) $("dockVolume").disabled = !voiceWanted;
+  }
+
+  $("langChip").onclick = () => setLang(myLang === "en" ? "ka" : "en");
+
+  // output device
+  async function refreshOutputs() {
+    if (!LT.canPickOutput) { $("outField").hidden = true; $("outNote").textContent = t().outNote; return; }
+    $("outNote").textContent = t().outNoteDesk;
+    try {
+      const named = LT.fillSelect($("output"), await LT.listDevices("audiooutput"), store.get("lt-sink", ""), t().outDefault);
+      $("outNames").hidden = named;
+    } catch {}
+  }
+  $("output").onchange = async () => {
+    try { await player.setSink($("output").value); store.set("lt-sink", $("output").value); }
+    catch (e) { LT.toast(e.message, "err"); }
+  };
+  $("outNames").onclick = async () => {
+    try { await LT.unlockDeviceNames(); } catch (e) { LT.toast(e.message, "err"); }
+    refreshOutputs();
+  };
+  if (LT.canPickOutput && store.get("lt-sink", "")) player.setSink(store.get("lt-sink", "")).catch(() => store.set("lt-sink", ""));
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) navigator.mediaDevices.addEventListener("devicechange", refreshOutputs);
+
+  // display
+  const size = store.num("lt-size", window.innerWidth < 600 ? 28 : 36);
+  $("size").value = size;
+  const paintSize = LT.range($("size"), $("sizeVal"), (v) => v + "px");
+  const applySize = () => document.documentElement.style.setProperty("--cap-size", $("size").value + "px");
+  $("size").addEventListener("input", () => { applySize(); store.set("lt-size", $("size").value); });
+  applySize();
+
+  $("showOrig").checked = store.bool("lt-orig", true);
+  $("showOrig").onchange = () => { store.setBool("lt-orig", $("showOrig").checked); applyClasses(); };
+  $("focus").checked = store.bool("lt-focus", false);
+  $("focus").onchange = () => { store.setBool("lt-focus", $("focus").checked); applyClasses(); };
+  function applyClasses() {
+    document.body.classList.toggle("hide-orig", !$("showOrig").checked);
+    document.body.classList.toggle("focus", $("focus").checked);
+  }
+  applyClasses();
+
+  // keep the screen awake (phones lock mid-talk otherwise)
+  let wakeSentinel = null;
+  async function wakeLock(on) {
+    if (!("wakeLock" in navigator)) return;
+    try {
+      if (on && !wakeSentinel) { wakeSentinel = await navigator.wakeLock.request("screen"); wakeSentinel.onrelease = () => { wakeSentinel = null; }; }
+      if (!on && wakeSentinel) { await wakeSentinel.release(); wakeSentinel = null; }
+    } catch {}
+  }
+  if (!("wakeLock" in navigator)) $("wakeRow").hidden = true;
+  $("wake").checked = store.bool("lt-wake", true);
+  $("wake").onchange = () => { store.setBool("lt-wake", $("wake").checked); wakeLock($("wake").checked); };
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && started && $("wake").checked) wakeLock(true);
+  });
+
+  // ---------------------------------------------------------------- text
+  function applyAll() {
+    const s = t();
     document.documentElement.lang = myLang;
+    const set = (id, text) => { const el = $(id); if (el) el.textContent = text; };
+    set("startLbl", s.start); set("readLbl", s.read); set("hpHint", s.hp); set("wVoiceLbl", s.voiceLbl);
+    set("wVoiceF", s.female); set("wVoiceM", s.male); set("sFemale", s.female); set("sMale", s.male);
+    set("histTitle", s.transcript); set("sTitle", s.settings); set("sLang", s.language); set("sSound", s.sound);
+    set("sVoiceOn", s.voiceOn); set("sVoiceOnSub", s.voiceOnSub); set("sVolume", s.volume); set("volNote", s.volNote);
+    set("sVoice", s.voiceLbl); set("sSpeed", s.speed); set("sAuto", s.auto); set("sSpeedHint", s.speedHint);
+    set("sOutput", s.output); set("sShowNames", s.showNames); set("sDisplay", s.display); set("sSize", s.size);
+    set("sOrig", s.orig); set("sOrigSub", s.origSub); set("sFocus", s.focus); set("sFocusSub", s.focusSub);
+    set("sWake", s.wake); set("sWakeSub", s.wakeSub); set("sTheme", s.theme); set("sThemeAuto", s.themeAuto);
+    set("sDark", s.dark); set("sLight", s.light); set("langChipText", myLang.toUpperCase());
+    set("capPlaceholder", s.capWaiting); set("logEmpty", s.noTranscript);
+    paintMute();
+    paintStatus();
     render();
   }
-  document.querySelectorAll(".langSeg").forEach((seg) => seg.addEventListener("click", (e) => {
-    const b = e.target.closest("button"); if (!b) return;
-    myLang = b.dataset.lang; store.set("lt-lang", myLang);
-    clearAudio();
-    applyLang();
-  }));
-  $("voiceSeg").onclick = (e) => {
-    const b = e.target.closest("button"); if (!b) return;
-    voice = b.dataset.voice; store.set("lt-voice", voice);
-    for (const x of $("voiceSeg").children) x.classList.toggle("on", x === b);
-  };
-  for (const x of $("voiceSeg").children) x.classList.toggle("on", x.dataset.voice === voice);
-  $("speak").onchange = () => { if (!$("speak").checked) clearAudio(); };
 
-  const capitalize = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  function paintStatus() {
+    const s = t();
+    const w = $("wSpeaker");
+    if (w) {
+      w.className = "pill" + (connected ? (speakerLive ? " live" : "") : "");
+      $("wSpeakerText").textContent = !connected ? s.connecting : speakerLive ? s.speakerLive : s.speakerOff;
+    }
+    $("statusPill").className = "pill" + (!connected ? " warn" : speakerLive ? " live" : "");
+    $("statusText").textContent = !connected ? s.offline : speakerLive ? s.live : s.waiting;
+  }
+
+  // Latin only: toUpperCase() would turn the first Georgian letter into a Mtavruli capital
+  const capitalize = (x) => /^[a-z]/.test(x) ? x.charAt(0).toUpperCase() + x.slice(1) : x;
 
   // What this listener reads for an utterance: the translation, or the original
   // when they picked the speaker's own language.
   function view(u) {
-    if (myLang === u.src) return { done: u.source, tentative: "", original: "" };
-    return {
-      done: capitalize(u.chunks.map((c) => c.text).join(" ")),
-      tentative: u.final ? "" : (u.preview || ""),
-      original: u.source,
-    };
+    if (myLang === u.src) return { pieces: u.source ? [u.source] : [], tentative: "", original: "" };
+    const pieces = u.chunks.map((c) => c.text);
+    if (pieces.length) pieces[0] = capitalize(pieces[0]);
+    return { pieces, tentative: u.final ? "" : (u.preview || ""), original: u.source };
   }
 
   function render() {
     const list = [...utts.values()].filter((u) => u.source || u.chunks.length);
     const cap = $("caption");
-    if (!list.length) return;
+    const last = list[list.length - 1];
+    $("dirLabel").textContent = last ? (last.src === myLang ? t().original : t().dir[last.src]) : t().dir[myLang === "en" ? "ka" : "en"];
 
-    // rolling caption: the end of the latest utterances, newest piece highlighted
-    cap.textContent = "";
-    const spans = [];
-    let len = 0;
-    for (let k = list.length - 1; k >= 0 && len < CAPTION_CHARS; k--) {
-      const v = view(list[k]);
-      if (v.tentative) spans.unshift(["interim", v.tentative]);
-      if (v.done) spans.unshift([k === list.length - 1 ? "speaking" : "", v.done]);
-      len += v.done.length + v.tentative.length;
-    }
-    for (const [cls, text] of spans) {
-      const span = document.createElement("span");
-      span.className = cls;
-      span.textContent = text + " ";
-      cap.appendChild(span);
+    if (!list.length) {
+      cap.innerHTML = "";
+      const p = document.createElement("span"); p.className = "placeholder"; p.textContent = t().capWaiting;
+      cap.appendChild(p);
+      $("captionOrig").textContent = "";
+    } else {
+      // rolling caption: the latest utterances, newest piece highlighted, guesses dimmed
+      const box = document.createElement("div");
+      const recent = list.slice(-CAPTION_UTTS);
+      recent.forEach((u, k) => {
+        const v = view(u);
+        const newest = k === recent.length - 1;
+        v.pieces.forEach((p, i) => {
+          const span = document.createElement("span");
+          span.className = !newest ? "old" : (i === v.pieces.length - 1 && !u.final ? "new" : "cur");
+          span.textContent = p + " ";
+          box.appendChild(span);
+        });
+        if (v.tentative) {
+          const span = document.createElement("span");
+          span.className = "tent"; span.textContent = v.tentative + " ";
+          box.appendChild(span);
+        }
+      });
+      cap.replaceChildren(box);
+      $("captionOrig").textContent = view(last).original || "";
     }
 
-    // history: one item per utterance, newest on top (the log is column-reverse)
+    // transcript: newest on top
     const log = $("log");
-    log.textContent = "";
-    for (const u of list) {
-      const v = view(u);
-      const el = document.createElement("div");
-      el.className = "item";
-      el.innerHTML = '<div class="b"></div><div class="a"></div>';
-      el.querySelector(".b").textContent = v.done + (v.tentative ? " …" : "");
-      el.querySelector(".a").textContent = v.original;
-      log.appendChild(el);
+    const frag = document.createDocumentFragment();
+    for (let k = list.length - 1; k >= 0; k--) {
+      const u = list[k], v = view(u);
+      const done = v.pieces.join(" ");
+      if (!done && !v.tentative) continue;
+      const li = document.createElement("li");
+      li.innerHTML = '<time></time><div><div class="t"><span></span> <span class="tent"></span></div><div class="o"></div></div>';
+      li.querySelector("time").textContent = LT.clock(u.ts);
+      li.querySelector(".t span").textContent = done;
+      li.querySelector(".t .tent").textContent = v.tentative ? v.tentative + " …" : "";
+      li.querySelector(".o").textContent = v.original;
+      frag.appendChild(li);
     }
+    log.replaceChildren(frag);
+    $("logEmpty").hidden = log.children.length > 0;
   }
 
-  // ---------- audio
-  // Each piece is downloaded, decoded, trimmed of leading/trailing silence and played
-  // back to back. When pieces pile up, playback speeds up (pitch preserved) to stay live.
-  const audio = new Audio();
-  audio.preservesPitch = true;
-  const clips = [];
-  let pumping = false;
-  let decodeCtx = null;
-  let stopCurrent = null;
+  player.onstate = ({ lag, queued, playing }) => {
+    $("lagInfo").textContent = voiceWanted && (playing || queued) && lag >= 0.5 ? t().delay(lag.toFixed(1)) : "";
+  };
 
-  function decode(buf) {
-    if (!decodeCtx) {
-      const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-      decodeCtx = new Ctx(1, 1, 24000);
-    }
-    return new Promise((resolve, reject) => {
-      const p = decodeCtx.decodeAudioData(buf, resolve, reject);
-      if (p && p.then) p.then(resolve, reject);
-    });
-  }
-
-  function trimmedWavUrl(ab) {
-    const sr = ab.sampleRate, d = ab.getChannelData(0), thr = 0.015;
-    let a = 0, b = d.length - 1;
-    while (a < d.length && Math.abs(d[a]) < thr) a++;
-    while (b > a && Math.abs(d[b]) < thr) b--;
-    if (a >= b) return null;
-    a = Math.max(0, a - Math.round(0.02 * sr));
-    b = Math.min(d.length, b + Math.round(0.07 * sr));
-    const n = b - a, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
-    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
-    w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt ");
-    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true);
-    v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
-    for (let i = 0; i < n; i++) {
-      const s = Math.max(-1, Math.min(1, d[a + i]));
-      v.setInt16(44 + i * 2, s < 0 ? s * 0x8000 : s * 0x7fff, true);
-    }
-    return URL.createObjectURL(new Blob([buf], { type: "audio/wav" }));
-  }
-
-  async function prepare(seg, lang, v) {
-    const r = await fetch(`/api/tts?id=${seg.id}&lang=${lang}&voice=${v}`);
-    if (!r.ok) throw new Error("tts " + r.status);
-    return trimmedWavUrl(await decode(await r.arrayBuffer()));
-  }
-
-  function enqueue(seg) {
-    const item = { seg, lang: myLang, at: performance.now(), p: prepare(seg, myLang, voice) };
-    item.p.catch(() => {});
-    clips.push(item);
-    pump();
-  }
-
-  function clearAudio() {
-    for (const c of clips.splice(0)) c.p.then((u) => u && URL.revokeObjectURL(u), () => {});
-    audio.pause();
-    if (stopCurrent) stopCurrent();
-    speechSynthesis.cancel();
-  }
-
-  function playUrl(url, rate) {
-    return new Promise((resolve) => {
-      // (not "pause": changing src fires one, which would cut the previous piece short)
-      const done = () => { stopCurrent = null; resolve(); };
-      stopCurrent = done;
-      audio.onended = audio.onerror = done;
-      audio.defaultPlaybackRate = rate;
-      audio.src = url;
-      audio.playbackRate = rate;
-      audio.play().catch(done);
-    });
-  }
-
-  async function pump() {
-    if (pumping) return;
-    pumping = true;
-    try {
-      while (clips.length) {
-        const item = clips.shift();
-        let url = null, failed = false;
-        try { url = await item.p; } catch { failed = true; }
-        const lag = (performance.now() - item.at) / 1000;
-        const skip = !$("speak").checked || item.lang !== myLang || (lag > MAX_LAG && clips.length);
-        if (skip) { if (url) URL.revokeObjectURL(url); continue; }
-        $("lag").textContent = lag.toFixed(1);
-        $("lagBadge").hidden = false;
-        if (failed) { await speakWithBrowser(item.seg.text[item.lang], item.lang); continue; }
-        if (!url) continue;
-        // 1.0x when we're keeping up, up to 1.35x when pieces are waiting or we're behind
-        const rate = Math.min(1.35, 1 + 0.1 * clips.length + (lag > 3 ? 0.1 : 0));
-        await playUrl(url, rate);
-        URL.revokeObjectURL(url);
-      }
-    } finally {
-      pumping = false;
-    }
-  }
-
-  // Fallback when the server has no TTS: use a browser voice if one exists for the language.
-  function speakWithBrowser(text, lang) {
-    return new Promise((resolve) => {
-      const v = speechSynthesis.getVoices().find((x) => x.lang.toLowerCase().startsWith(lang));
-      if (!v || !text) return resolve();
-      const u = new SpeechSynthesisUtterance(text);
-      u.voice = v; u.lang = v.lang; u.onend = u.onerror = resolve;
-      speechSynthesis.speak(u);
-    });
-  }
-
-  // ---------- live stream
+  // ---------------------------------------------------------------- live stream
   function connect() {
     const es = new EventSource("/events");
-    es.onopen = () => { $("conn").className = "badge live"; $("connText").textContent = UI[myLang].on; };
-    es.onerror = () => { $("conn").className = "badge"; $("connText").textContent = UI[myLang].off; };
+    es.onopen = () => { connected = true; paintStatus(); };
+    es.onerror = () => { connected = false; paintStatus(); };
     es.onmessage = (e) => {
       const msg = JSON.parse(e.data);
       if (msg.type === "history") {
         utts.clear();
         for (const u of msg.utterances) utts.set(u.utt, { ...u, preview: "" });
+        if (msg.speaker) { speakerLive = msg.speaker.live; paintStatus(); }
       } else if (msg.type === "source") {
         const u = utts.get(msg.utt) || { utt: msg.utt, chunks: [], preview: "" };
         Object.assign(u, { src: msg.src, dst: msg.dst, source: msg.text, final: msg.final, ts: msg.ts });
@@ -279,32 +500,24 @@
       } else if (msg.type === "chunk") {
         const u = utts.get(msg.utt);
         if (u) u.chunks.push({ id: msg.id, text: msg.text[msg.dst] });
-        if ($("speak").checked && msg.dst === myLang) enqueue(msg);
+        if (started) player.enqueue(msg);
       } else if (msg.type === "preview") {
         const u = utts.get(msg.utt);
         if (u) u.preview = msg.text;
+      } else if (msg.type === "speaker") {
+        speakerLive = msg.live; paintStatus(); return;
       } else if (msg.type === "clear") {
-        utts.clear();
-        $("caption").textContent = ""; $("log").textContent = "";
-        return;
+        utts.clear(); player.clear();
       } else {
         return;
       }
-      render();
+      if (started) render();
     };
   }
 
-  $("startBtn").onclick = () => {
-    // unlock audio playback with a user gesture (required on phones)
-    audio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=";
-    audio.play().catch(() => {});
-    if (navigator.audioSession) navigator.audioSession.type = "playback";
-    speechSynthesis.getVoices();
-    $("overlay").remove();
-    connect();
-  };
-
-  applyLang();
+  $("footInfo").textContent = location.host;
+  applyAll();
+  connect();
   </script>
 </body>
 </html>

@@ -4,28 +4,35 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Live Translate</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Georgian:wght@400;500;600;700;800&display=swap">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="stylesheet" href="/style.css">
+  <script src="/ui.js"></script>
 </head>
 <body>
-  <div class="wrap">
-    <header class="top">
-      <h1>Live Translate <small>ქართული ⇄ English</small></h1>
-    </header>
+  <main class="landing">
+    <span class="logo" style="width:56px;height:56px;border-radius:18px"><i data-icon="waves" class="lg"></i></span>
+    <h1>Live Translate</h1>
+    <p class="lead">ქართული ⇄ English ლაივ თარგმანი. სპიკერი ლაპარაკობს, მსმენელები ტელეფონზე კითხულობენ და ისმენენ თარგმანს.</p>
 
-    <p class="muted">აირჩიე როლი. სპიკერის გვერდი Google Chrome-ში გახსენი იმ კომპიუტერზე, რომელზეც მიკროფონია მიერთებული.</p>
-
-    <div class="cards">
-      <a class="card" href="/speaker">
-        <div class="ico">🎤</div>
-        <h3>სპიკერი / Speaker</h3>
-        <p>ლაპარაკობ მიკროფონში — ტექსტი ითარგმნება და ეგზავნება მსმენელებს.</p>
+    <div class="roles">
+      <a class="role" href="/speaker">
+        <span class="role-ico"><i data-icon="mic" class="lg"></i></span>
+        <h3>სპიკერი</h3>
+        <p>ამ კომპიუტერზე, Google Chrome-ში. მიკროფონი, ენა, ხმა და მსმენელების QR კოდი.</p>
+        <span class="go">გახსნა <i data-icon="arrow" class="sm"></i></span>
       </a>
-      <a class="card" href="/listen">
-        <div class="ico">🎧</div>
-        <h3>მსმენელი / Listener</h3>
-        <p>Listen to the live translation on your phone or laptop.</p>
+      <a class="role" href="/listen">
+        <span class="role-ico"><i data-icon="headphones" class="lg"></i></span>
+        <h3>მსმენელი · Listener</h3>
+        <p>Read and hear the live translation on your phone or laptop.</p>
+        <span class="go">Open <i data-icon="arrow" class="sm"></i></span>
       </a>
     </div>
-  </div>
+  </main>
+  <script>LT.hydrateIcons();</script>
 </body>
 </html>

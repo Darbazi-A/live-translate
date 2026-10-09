@@ -3,3 +3,4 @@ __pycache__/
 .venv/
 # session logs contain what the speakers said
 logs/
+settings.json

@@ -106,7 +106,7 @@ def drop_repeats(words, spoken):
 
 
 class Utterance:
-    def __init__(self, translate):
+    def __init__(self, translate=None):
         self.translate = translate      # text -> translated text
         self.accounted = []             # hypothesis words already consumed (spoken or dropped)
         self.spoken = []                # words actually handed to listeners
@@ -119,13 +119,17 @@ class Utterance:
         self.last_update = time.monotonic()
         self.text = ""
 
-    def update(self, text, final, mode=DEFAULT_MODE, now=None):
-        """Feed the full current utterance text. Returns (chunks_to_emit, preview)."""
+    def update(self, text, final, mode=DEFAULT_MODE, now=None, translated=None):
+        """Feed the full current utterance text. Returns (chunks_to_emit, preview).
+        `translated` is the translation of `text` when the caller already has it (the
+        server translates outside its lock); otherwise self.translate is called."""
         now = time.monotonic() if now is None else now
         m = self.mode = MODES.get(mode, MODES[DEFAULT_MODE])
         self.last_update = now
         self.text = text
-        hyp = self.translate(text).split() if text.strip() else []
+        if translated is None:
+            translated = self.translate(text) if text.strip() else ""
+        hyp = translated.split()
         k = align(self.accounted, hyp)
         cand = hyp[k:]
 
