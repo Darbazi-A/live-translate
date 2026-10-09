@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="ka">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Speaker · Live Translate</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <h1>🎤 სპიკერი <small>Speaker</small></h1>
+      <div class="row">
+        <span class="badge" id="status"><span class="dot"></span><span id="statusText">გამორთულია</span></span>
+        <span class="badge ok"><span class="dot"></span><span id="listeners">0</span>&nbsp;მსმენელი</span>
+      </div>
+    </header>
+
+    <div class="panel">
+      <div class="row" style="gap:22px">
+        <button class="mic" id="mic" title="Start / Stop">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 14a3 3 0 0 0 3-3V5a3 3 0 1 0-6 0v6a3 3 0 0 0 3 3Zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 6 6.92V21h2v-3.08A7 7 0 0 0 19 11h-2Z"/></svg>
+          <span id="micLabel">დაწყება</span>
+        </button>
+        <div class="grow">
+          <h2>რა ენაზე ლაპარაკობ? / Spoken language</h2>
+          <div class="seg" id="langSeg">
+            <button data-lang="ka" class="on">🇬🇪 ქართული → EN</button>
+            <button data-lang="en">🇬🇧 English → KA</button>
+          </div>
+          <h2 style="margin-top:16px">რეჟიმი / Mode</h2>
+          <div class="seg" id="modeSeg">
+            <button data-mode="fast">⚡ სწრაფი</button>
+            <button data-mode="balanced" class="on">ბალანსი</button>
+            <button data-mode="quality">ხარისხიანი</button>
+          </div>
+          <div class="muted" id="modeHint" style="margin-top:6px"></div>
+          <div id="err" class="err" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>ლაივი / Live</h2>
+      <div class="live-box" id="live">
+        <div class="src" id="liveSrc"><span class="placeholder">დააჭირე „დაწყებას“ და ილაპარაკე…</span></div>
+        <div class="dst"><span id="liveDst"></span> <span class="interim" id="livePreview"></span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">ნათარგმნი / Translated</h2>
+        <button class="btn" id="clear">გასუფთავება</button>
+      </div>
+      <div class="log" id="log" style="margin-top:12px"></div>
+    </div>
+
+    <div class="panel">
+      <h2>ტესტი მიკროფონის გარეშე / Type to test</h2>
+      <form class="row" id="typeForm">
+        <input id="typeInput" class="grow" autocomplete="off" placeholder="ჩაწერე წინადადება და Enter"
+          style="padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font:inherit;min-width:0">
+        <button class="btn primary">გაგზავნა</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>მსმენელებისთვის / For listeners (same Wi-Fi)</h2>
+      <div class="row" style="align-items:flex-start">
+        <div id="qr"></div>
+        <div class="grow urls" id="urls"><span class="muted">…</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+  <script>
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const $ = (id) => document.getElementById(id);
+  const LOCALE = { ka: "ka-GE", en: "en-US" };
+  const MIN_GAP_MS = 250;   // at most ~4 updates per second while an utterance grows
+
+  // The server re-translates the whole growing utterance and voices only the words
+  // that consecutive translations agree on (see simul.py). These modes trade delay
+  // against how settled the translation must be before it is spoken.
+  const MODE_HINTS = {
+    fast: "ყველაზე დაბალი დაყოვნება (~1 წმ), თარგმანი ზოგჯერ ნაკლებად გამართულია.",
+    balanced: "რეკომენდებული: ~1.5–2 წმ, თარგმანი თითქმის სრული წინადადების ხარისხისაა.",
+    quality: "დიდი ნაწილები და საუკეთესო თარგმანი, ~3–4 წმ დაყოვნება.",
+  };
+
+  let lang = "ka";
+  let mode = "balanced";
+  let running = false;
+  let rec = null;
+  let session = "";                 // new id each time Chrome (re)starts recognition
+  let consumed = 0;                 // results already folded into closed utterances
+  let uttNo = 0;                    // utterance counter within the session
+  const lastText = new Map();       // utterance id -> last text sent (non-final)
+  const pending = new Map();        // utterance id -> newest unsent update
+  let inflight = false, lastSentAt = 0, pumpTimer = null;
+
+  function setStatus(text, live) {
+    $("statusText").textContent = text;
+    $("status").classList.toggle("live", !!live);
+  }
+  function showError(msg) { $("err").textContent = msg || ""; }
+
+  async function post(path, body) {
+    const r = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body || {}),
+    });
+    const text = await r.text();
+    try { return JSON.parse(text); }
+    catch { throw new Error(`სერვერმა უცნობი პასუხი დააბრუნა (HTTP ${r.status}). გადატვირთე სერვერი (start.bat).`); }
+  }
+
+  // ---------- sending: one request at a time, newest text wins, finals never dropped
+  function push(utt, text, final) {
+    text = text.trim();
+    const prev = pending.get(utt);
+    if (prev && prev.final) return;
+    if (!text) { if (final) lastText.delete(utt); return; }
+    if (!final && lastText.get(utt) === text) return;
+    if (final) lastText.delete(utt); else lastText.set(utt, text);
+    // an older utterance that never got its final (e.g. Chrome dropped it) is closed now
+    if (!final) for (const [u, t] of [...lastText]) if (u !== utt) push(u, t, true);
+    pending.set(utt, { utt, lang, mode, text, final });
+    pump();
+  }
+
+  async function pump() {
+    if (inflight || !pending.size) return;
+    const [utt, body] = pending.entries().next().value;
+    const wait = lastSentAt + MIN_GAP_MS - performance.now();
+    if (!body.final && wait > 0) {
+      if (!pumpTimer) pumpTimer = setTimeout(() => { pumpTimer = null; pump(); }, wait);
+      return;
+    }
+    pending.delete(utt);
+    inflight = true;
+    lastSentAt = performance.now();
+    try {
+      const res = await post("/api/stream", body);
+      if (res.error) showError(res.error);
+      showTranslation(body, res);
+      if (typeof res.listeners === "number") $("listeners").textContent = res.listeners;
+    } catch (e) {
+      showError("სერვერთან კავშირი ვერ მოხერხდა: " + e.message);
+    } finally {
+      inflight = false;
+      pump();
+    }
+  }
+
+  function showTranslation(body, res) {
+    $("liveSrc").textContent = body.text;
+    $("liveDst").textContent = res.translation || "";
+    $("livePreview").textContent = body.final ? "" : (res.preview || "");
+    if (body.final && body.text) {
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `<div class="meta">${body.lang.toUpperCase()} → ${body.lang === "ka" ? "EN" : "KA"}</div>
+        <div class="a"></div><div class="b"></div>`;
+      el.querySelector(".a").textContent = body.text;
+      el.querySelector(".b").textContent = res.translation || "";
+      $("log").appendChild(el);
+      while ($("log").children.length > 200) $("log").firstChild.remove();
+    }
+  }
+
+  // ---------- recognition
+  function buildRecognizer() {
+    const r = new SR();
+    r.lang = LOCALE[lang];
+    r.continuous = true;
+    r.interimResults = true;
+    r.maxAlternatives = 1;
+
+    r.onstart = () => {
+      session = Date.now().toString(36);
+      consumed = 0;
+      uttNo = 0;
+      setStatus("ისმინება…", true);
+    };
+
+    // One utterance = everything Chrome has heard since its last final result.
+    // While speaking, Chrome often splits the text into several non-final results
+    // (a settled part + a volatile tail) and merges them into one final result at a
+    // pause, so the non-final results must be joined, never treated separately —
+    // otherwise the tail gets translated twice. The server re-translates the whole
+    // utterance on every update and works out what is new.
+    r.onresult = (e) => {
+      let i = consumed, finals = "";
+      while (i < e.results.length && e.results[i].isFinal) finals += e.results[i++][0].transcript;
+      if (finals.trim()) {
+        push(`${session}-${uttNo}`, finals, true);
+        uttNo++;
+      }
+      consumed = i;
+      let interim = "";
+      for (; i < e.results.length; i++) interim += e.results[i][0].transcript;
+      if (interim.trim()) push(`${session}-${uttNo}`, interim, false);
+    };
+
+    r.onerror = (e) => {
+      if (e.error === "no-speech" || e.error === "aborted") return;
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        showError("მიკროფონზე წვდომა უარყოფილია. Chrome-ში დაუშვი მიკროფონი (მისამართის ზოლში 🔒 ხატულა). გვერდი უნდა გაიხსნას http://localhost-ით ან https-ით.");
+        stop();
+        return;
+      }
+      if (e.error === "network") {
+        showError("ხმის ამოცნობას ინტერნეტი სჭირდება (Chrome იყენებს Google-ის სერვისს).");
+        return;
+      }
+      showError("შეცდომა: " + e.error);
+    };
+
+    // Chrome ends recognition after silence or ~60s; close what was being said and restart.
+    r.onend = () => {
+      for (const [utt, text] of [...lastText]) push(utt, text, true);
+      if (running) {
+        try { r.start(); } catch { setTimeout(() => running && r.start(), 300); }
+      } else {
+        setStatus("გამორთულია", false);
+      }
+    };
+    return r;
+  }
+
+  function start() {
+    if (!SR) {
+      showError("ამ ბრაუზერს ხმის ამოცნობა არ აქვს. გამოიყენე Google Chrome (desktop).");
+      return;
+    }
+    showError("");
+    running = true;
+    rec = buildRecognizer();
+    rec.start();
+    $("mic").classList.add("live");
+    $("micLabel").textContent = "გაჩერება";
+  }
+
+  function stop() {
+    running = false;
+    if (rec) rec.stop();
+    $("mic").classList.remove("live");
+    $("micLabel").textContent = "დაწყება";
+    setStatus("გამორთულია", false);
+  }
+
+  $("mic").onclick = () => (running ? stop() : start());
+
+  $("langSeg").onclick = (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    for (const [utt, text] of [...lastText]) push(utt, text, true);
+    lang = b.dataset.lang;
+    for (const x of $("langSeg").children) x.classList.toggle("on", x === b);
+    if (running) { // restart with the new language
+      running = false; rec.onend = null; rec.abort();
+      start();
+    }
+  };
+
+  $("modeSeg").onclick = (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    mode = b.dataset.mode;
+    for (const x of $("modeSeg").children) x.classList.toggle("on", x === b);
+    $("modeHint").textContent = MODE_HINTS[mode];
+    try { localStorage.setItem("lt-mode2", mode); } catch {}
+  };
+  try {
+    const saved = localStorage.getItem("lt-mode2");
+    if (MODE_HINTS[saved]) $("modeSeg").querySelector(`[data-mode="${saved}"]`).click();
+  } catch {}
+  $("modeHint").textContent = MODE_HINTS[mode];
+
+  $("clear").onclick = async () => {
+    await post("/api/clear");
+    $("log").innerHTML = "";
+    $("liveSrc").textContent = $("liveDst").textContent = $("livePreview").textContent = "";
+  };
+
+  $("typeForm").onsubmit = (e) => {
+    e.preventDefault();
+    const t = $("typeInput").value;
+    $("typeInput").value = "";
+    if (t.trim()) push("typed-" + Date.now().toString(36), t, true);
+  };
+
+  async function refreshInfo() {
+    try {
+      const info = await (await fetch("/api/info")).json();
+      $("listeners").textContent = info.listeners;
+      const box = $("urls");
+      if (!box.dataset.done) {
+        box.dataset.done = "1";
+        box.innerHTML = info.urls.length
+          ? '<div class="muted" style="margin-bottom:6px">მსმენელებმა ტელეფონით გახსნან (ან დაასკანერონ QR):</div>'
+          : '<span class="muted">ქსელის მისამართი ვერ მოიძებნა.</span>';
+        for (const u of info.urls) {
+          const c = document.createElement("code"); c.textContent = u; box.appendChild(c);
+        }
+        if (!info.tts) box.insertAdjacentHTML("beforeend",
+          '<p class="err">edge-tts არ არის დაყენებული — ხმოვანი თარგმანი ქართულად არ იმუშავებს. გაუშვი: pip install edge-tts</p>');
+        if (info.urls[0] && window.qrcode) {
+          const qr = qrcode(0, "M"); qr.addData(info.urls[0]); qr.make();
+          $("qr").innerHTML = `<img alt="QR" src="${qr.createDataURL(4, 0)}">`;
+        }
+      }
+    } catch {}
+  }
+  refreshInfo();
+  setInterval(refreshInfo, 4000);
+  </script>
+</body>
+</html>
