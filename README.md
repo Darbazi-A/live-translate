@@ -5,34 +5,35 @@
 
 ## სარჩევი
 
-- [უმარტივესი გზა: ინსტალერი](#უმარტივესი-გზა-ინსტალერი)
-- [რა გჭირდებათ](#რა-გჭირდებათ)
-- [1. Python-ის დაყენება](#1-python-ის-დაყენება)
-- [2. Git-ის დაყენება (ან ZIP-ით ჩამოტვირთვა)](#2-git-ის-დაყენება-ან-zip-ით-ჩამოტვირთვა)
-- [3. პროექტის ჩამოტვირთვა](#3-პროექტის-ჩამოტვირთვა)
-- [4. გაშვება](#4-გაშვება)
+- [უმარტივესი გზა: Windows-ის ინსტალერი](#უმარტივესი-გზა-windows-ის-ინსტალერი)
+- [ხელით დაყენება (სარეზერვო გზა)](#ხელით-დაყენება-სარეზერვო-გზა)
+  - [რა გჭირდებათ](#რა-გჭირდებათ)
+  - [1. Python-ის დაყენება](#1-python-ის-დაყენება)
+  - [2. Git-ის დაყენება (ან ZIP-ით ჩამოტვირთვა)](#2-git-ის-დაყენება-ან-zip-ით-ჩამოტვირთვა)
+  - [3. პროექტის ჩამოტვირთვა](#3-პროექტის-ჩამოტვირთვა)
+  - [4. გაშვება](#4-გაშვება)
 - [5. ღონისძიებაზე: სპიკერი და მსმენელები](#5-ღონისძიებაზე-სპიკერი-და-მსმენელები)
 - [პარამეტრები: მიკროფონი, ხმა, ლექსიკონი](#პარამეტრები-მიკროფონი-ხმა-ლექსიკონი)
 - [განახლება](#განახლება)
 - [პრობლემების გადაჭრა](#პრობლემების-გადაჭრა)
 - [ინსტალერის აწყობა (დეველოპერისთვის)](#ინსტალერის-აწყობა-დეველოპერისთვის)
 
-## უმარტივესი გზა: ინსტალერი
+## უმარტივესი გზა: Windows-ის ინსტალერი
 
-Python-ის, Git-ის და ტერმინალის გარეშე. ყველაფერი (Python-იც) ინსტალერშია ჩაშენებული.
+Python-ის, Git-ის და ტერმინალის გარეშე. ყველაფერი (Python-იც) ინსტალერშია ჩაშენებული. Windows 10/11.
 
-1. გახსენით [Releases](https://github.com/Darbazi-A/live-translate/releases/latest) და ჩამოტვირთეთ:
-   - **Windows 10/11:** `LiveTranslate-Setup-x.y.z.exe`
-   - **macOS (Apple Silicon, M1 და უფრო ახალი):** `LiveTranslate-mac-x.y.z.dmg`
-2. **Windows:** გაუშვით Setup-ი → Next → Install. ინსტალერი თვითონ უშვებს ტელეფონებს Firewall-ში, ქმნის ხატულას Desktop-ზე და Start მენიუში.
+1. გახსენით [Releases](https://github.com/Darbazi-A/live-translate/releases/latest) და ჩამოტვირთეთ `LiveTranslate-Setup-x.y.z.exe`.
+2. გაუშვით → Next → Install. ინსტალერი თვითონ უშვებს ტელეფონებს Firewall-ში და ქმნის ხატულას Desktop-ზე და Start მენიუში.
    ⚠️ თუ გამოჩნდა **„Windows protected your PC“** (SmartScreen): **More info → Run anyway**. ეს ჩნდება, რადგან ინსტალერი ციფრული სერტიფიკატით არ არის ხელმოწერილი.
-3. **macOS:** გახსენით `.dmg` და გადაათრიეთ **Live Translate** ხატულა **Applications**-ში.
-   ⚠️ პირველ გაშვებაზე macOS იტყვის, რომ დეველოპერი დაუდასტურებელია: **System Settings → Privacy & Security → Open Anyway**. ერთხელ საკმარისია.
-4. გაუშვით **Live Translate**. სპიკერის გვერდი Chrome-ში თავისით გაიხსნება. Windows-ზე ჩანს შავი ფანჯარაც მისამართებით: ის ღონისძიების განმავლობაში ღია უნდა დარჩეს. macOS-ზე პროგრამა ფონზე მუშაობს და ითიშება სპიკერის გვერდიდან: **პარამეტრები → სერვერის გამორთვა**.
+3. გაუშვით **Live Translate** (Desktop-ის ხატულა). სპიკერის გვერდი Chrome-ში თავისით გაიხსნება. ჩანს შავი ფანჯარაც მისამართებით: ის ღონისძიების განმავლობაში ღია უნდა დარჩეს, მისი დახურვით სერვერი ჩერდება.
 
-სპიკერის კომპიუტერზე **Google Chrome** უნდა იყოს (ხმის ამოცნობისთვის). მსმენელებს არაფერი სჭირდებათ.
+სპიკერის კომპიუტერზე **Google Chrome** უნდა იყოს (ხმის ამოცნობისთვის). თუ არ აყენია, ინსტალერი გაგაფრთხილებთ. მსმენელებს არაფერი სჭირდებათ.
 
-თუ ინსტალერი არ გამოგადგათ, ქვემოთ აღწერილია გაშვება Python-ით.
+**სარეზერვო გზა:** თუ ინსტალერი არ გამოგადგათ, ან macOS/Linux-ზე აყენებთ, მიჰყევით ქვემოთ აღწერილ ხელით დაყენებას (Python + `start.bat` / `start.sh`).
+
+## ხელით დაყენება (სარეზერვო გზა)
+
+ინსტალერის გარეშე, Python-ით. მუშაობს Windows-ზე, macOS-ზე და Linux-ზე. ნაბიჯები 1–4 ერთხელ კეთდება.
 
 ## რა გჭირდებათ
 
@@ -231,7 +232,7 @@ git pull
 
 ZIP-ის შემთხვევაში ჩამოტვირთეთ თავიდან და ძველი საქაღალდე ჩაანაცვლეთ.
 
-ინსტალერის შემთხვევაში ჩამოტვირთეთ ახალი ინსტალერი და გაუშვით: ძველ ვერსიას თვითონ ჩაანაცვლებს, პარამეტრები და ლექსიკონი შენარჩუნდება.
+Windows-ის ინსტალერის შემთხვევაში ჩამოტვირთეთ ახალი ინსტალერი და გაუშვით: ძველ ვერსიას თვითონ ჩაანაცვლებს, პარამეტრები და ლექსიკონი შენარჩუნდება.
 
 ## პრობლემების გადაჭრა
 
@@ -242,7 +243,6 @@ ZIP-ის შემთხვევაში ჩამოტვირთეთ �
 | **„Could not install the required package“** | შეამოწმეთ ინტერნეტი და გაუშვით თავიდან. კორპორატიულ ქსელში შეიძლება პროქსი ბლოკავდეს |
 | macOS: **`CERTIFICATE_VERIFY_FAILED`** | ახალ ვერსიაში აღარ უნდა გამოჩნდეს. თუ მაინც: გაუშვით **Install Certificates.command** (Applications → Python 3.x) |
 | Windows: **„Windows protected your PC“** | **More info → Run anyway** (ინსტალერი არ არის ხელმოწერილი) |
-| macOS: **„cannot be opened… developer cannot be verified“** | **System Settings → Privacy & Security → Open Anyway** |
 | Linux: **„ვირტუალური გარემო ვერ შეიქმნა“** | `sudo apt install python3-venv` |
 | **ტელეფონი გვერდს ვერ ხსნის** | 1) ტელეფონი და კომპიუტერი ერთსა და იმავე Wi-Fi-ზე უნდა იყოს (მობილური ინტერნეტი გამორთეთ). 2) Firewall-ში დაშვებული უნდა იყოს (Windows: **Allow access**). 3) სტუმრების Wi-Fi ქსელებში ხშირად ჩართულია **„client isolation“**, რაც მოწყობილობებს ერთმანეთის დანახვას უკრძალავს. მაშინ გამოიყენეთ სხვა ქსელი ან საკუთარი როუტერი |
 | **„მიკროფონზე წვდომა უარყოფილია“** | Chrome-ის მისამართის ზოლში დააჭირეთ 🔒 ხატულას → Microphone → Allow. გვერდი გახსენით `http://localhost:8000/speaker` მისამართით |
@@ -288,11 +288,11 @@ ZIP-ის შემთხვევაში ჩამოტვირთეთ �
 
 ## ინსტალერის აწყობა (დეველოპერისთვის)
 
-ინსტალერებს GitHub Actions აწყობს ([.github/workflows/build.yml](.github/workflows/build.yml)):
+Windows-ის ინსტალერს GitHub Actions აწყობს ([.github/workflows/build.yml](.github/workflows/build.yml)):
 
-- **ახალი ვერსიის გამოშვება:** `server.py`-ში შეცვალეთ `VERSION`, შემდეგ `git tag v1.2.0 && git push --tags`. დაახლოებით 10 წუთში [Releases](https://github.com/Darbazi-A/live-translate/releases)-ში გამოჩნდება Windows-ის `Setup.exe` და macOS-ის `.dmg`.
-- **ტესტური აწყობა გამოშვების გარეშე:** GitHub → **Actions → Build installers → Run workflow**. ფაილები ჩამოიტვირთება გაშვების გვერდის **Artifacts**-დან.
-- **ლოკალურად:** `pip install -r requirements.txt pyinstaller`, შემდეგ `pyinstaller packaging/LiveTranslate.spec` (შედეგი `dist/`-ში). Windows-ზე Setup.exe-სთვის საჭიროა [Inno Setup](https://jrsoftware.org/isinfo.php): `ISCC packaging\windows\LiveTranslate.iss`.
+- **ახალი ვერსიის გამოშვება:** `server.py`-ში შეცვალეთ `VERSION`, შემდეგ `git tag v1.2.0 && git push --tags`. დაახლოებით 10 წუთში [Releases](https://github.com/Darbazi-A/live-translate/releases)-ში გამოჩნდება `LiveTranslate-Setup-x.y.z.exe`.
+- **ტესტური აწყობა გამოშვების გარეშე:** GitHub → **Actions → Build installers → Run workflow**. ფაილი ჩამოიტვირთება გაშვების გვერდის **Artifacts**-დან.
+- **ლოკალურად (Windows-ზე):** `pip install -r requirements.txt pyinstaller`, შემდეგ `pyinstaller packaging/LiveTranslate.spec` (შედეგი `dist/`-ში) და [Inno Setup](https://jrsoftware.org/isinfo.php)-ით `ISCC packaging\windows\LiveTranslate.iss`.
 - ხატულები: `python packaging/make_icons.py`.
 
-დაყენებულ ვერსიაში პარამეტრები და ჟურნალები ინახება: Windows `%APPDATA%\LiveTranslate`, macOS `~/Library/Application Support/LiveTranslate`.
+დაყენებულ ვერსიაში პარამეტრები და ჟურნალები ინახება `%APPDATA%\LiveTranslate`-ში.

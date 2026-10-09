@@ -1,18 +1,14 @@
 # PyInstaller build of the server with Python and all packages inside, so the target
-# computer needs nothing installed.  From the project folder:
+# Windows computer needs nothing installed.  From the project folder:
 #   pip install -r requirements.txt pyinstaller
 #   pyinstaller --noconfirm packaging/LiveTranslate.spec
-# Windows -> dist/LiveTranslate/LiveTranslate.exe (then packaging/windows/LiveTranslate.iss)
-# macOS   -> dist/Live Translate.app
+# -> dist/LiveTranslate/LiveTranslate.exe, then packaging/windows/LiveTranslate.iss
+# (macOS and Linux run from source with start.sh)
 import os
-import re
-import sys
 
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 ROOT = os.path.abspath(os.path.join(SPECPATH, ".."))
-VERSION = re.search(r'^VERSION = "(.+)"', open(os.path.join(ROOT, "server.py"), encoding="utf-8").read(), re.M).group(1)
-MAC = sys.platform == "darwin"
 
 # web pages (without the test harness) + CA certificates
 datas = [
@@ -36,23 +32,8 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name="LiveTranslate",
-    console=not MAC,   # Windows: the console window shows the addresses; closing it stops the server
-    icon=os.path.join(SPECPATH, "icon.icns" if MAC else "icon.ico"),
+    console=True,   # the console window shows the addresses; closing it stops the server
+    icon=os.path.join(SPECPATH, "icon.ico"),
 )
 coll = COLLECT(exe, a.binaries, a.datas, name="LiveTranslate")
 
-if MAC:
-    app = BUNDLE(
-        coll,
-        name="Live Translate.app",
-        icon=os.path.join(SPECPATH, "icon.icns"),
-        bundle_identifier="ge.darbazi.livetranslate",
-        info_plist={
-            "CFBundleShortVersionString": VERSION,
-            "CFBundleVersion": VERSION,
-            # background app: no Dock icon; it opens the speaker page in Chrome and is
-            # stopped with the "turn off server" button there
-            "LSUIElement": True,
-            "NSLocalNetworkUsageDescription": "Phones on the same Wi-Fi connect to this computer to receive the live translation.",
-        },
-    )

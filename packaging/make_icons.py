@@ -1,6 +1,6 @@
 """
 Draws the Live Translate icon (gradient tile + sound bars, same as the web logo) and
-writes icon.png, icon.ico (Windows) and icon.icns (macOS) next to this file, plus
+writes icon.png and icon.ico (Windows installer) next to this file, plus
 the favicons in public/.
 Pure Python, no Pillow needed:  python packaging/make_icons.py
 """
@@ -85,26 +85,18 @@ def ico(images):
     return out + data
 
 
-def icns(images):
-    types = {16: b"icp4", 32: b"icp5", 64: b"icp6", 128: b"ic07", 256: b"ic08", 512: b"ic09"}
-    body = b"".join(types[s] + struct.pack(">I", len(img) + 8) + img for s, img in images if s in types)
-    return b"icns" + struct.pack(">I", len(body) + 8) + body
-
-
 def main():
-    imgs = {s: render(s) for s in (16, 32, 48, 64, 128, 256, 512)}
+    imgs = {s: render(s) for s in (16, 32, 48, 64, 256, 512)}
     with open(os.path.join(HERE, "icon.png"), "wb") as f:
         f.write(imgs[512])
     with open(os.path.join(HERE, "icon.ico"), "wb") as f:
         f.write(ico([(s, imgs[s]) for s in (16, 32, 48, 256)]))
-    with open(os.path.join(HERE, "icon.icns"), "wb") as f:
-        f.write(icns([(s, imgs[s]) for s in (16, 32, 64, 128, 256, 512)]))
     public = os.path.join(HERE, "..", "public")
     with open(os.path.join(public, "favicon.png"), "wb") as f:
         f.write(imgs[64])
     with open(os.path.join(public, "apple-touch-icon.png"), "wb") as f:
         f.write(render(180))
-    print("icon.png, icon.ico, icon.icns written to", HERE, "and favicons to public/")
+    print("icon.png and icon.ico written to", HERE, "and favicons to public/")
 
 
 if __name__ == "__main__":
